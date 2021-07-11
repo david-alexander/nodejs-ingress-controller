@@ -1,0 +1,23 @@
+apiVersion: skaffold/v2beta18
+kind: Config
+build:
+  artifacts:
+    - image: YOUR_REGISTRY_HERE/ingress-nodejs-controller
+      context: fs
+  # local:
+  #   push: false
+  tagPolicy:
+    gitCommit:
+      ignoreChanges: true
+deploy:
+  helm:
+    releases:
+      - name: ingress-nodejs
+        chartPath: chart
+        artifactOverrides:
+          image: YOUR_REGISTRY_HERE/ingress-nodejs-controller
+portForward:
+  - resourceType: service
+    namespace: ingress-nodejs-ingress-nodejs
+    resourceName: ingress-nodejs-ingress-nodejs-controller
+    port: 80
