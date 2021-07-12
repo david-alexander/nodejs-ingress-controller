@@ -25,13 +25,16 @@ We think it's important to keep tabs on the TCB of Node.js Ingress Controller to
 
 Item     | Purpose | Used by component | Notes
 ---------|---------|------|-----
-[Alpine Linux](https://alpinelinux.org/) v3.11 | Operating system | All | Lightweight base image. Latest major release.
-[Node.js](https://nodejs.org/) v14 | JS runtime | All | Current long-term support (LTS) release.
-[NPM](https://npmjs.com/) CLI v7 | Package manager | All | Build-time dependency.
-[TypeScript](https://npmjs.com/package/typescript) v4 | JS preprocessor / static checker | All | TODO: Run this at build time.
-[ts-node](https://npmjs.com/package/ts-node) | Transpiles TS to JS at runtime. | All | TODO: Remove this and run TS transpiler at build time.
-[@kubernetes/client-node](https://npmjs.com/package/@kubernetes/client-node) | Kubernetes client library | Core, K8sCRDSessionStore | 
-[http-proxy](https://npmjs.com/package/http-proxy) | Facilitates proxying of HTTP connections to backend servers | Core | 
-[cookie](https://npmjs.com/package/cookie) | Parses and generates `Cookie`/`Set-Cookie` headers. Used for session management. | Core |
-[uuid](https://npmjs.com/package/uuid) | Generates UUIDs. Used for session management. | Core |
-[openid-client](https://npmjs.com/package/openid-client) | Performs OAuth / OIDC flows. | OpenIDConnectPlugin |
+**[Alpine Linux](https://alpinelinux.org/) v3.11** | Operating system | All | Lightweight base image. Latest major release.
+**[Node.js](https://nodejs.org/) v14** | JS runtime | All | Current long-term support (LTS) release. Only the core modules listed below are referenced directly.
+([http](https://nodejs.org/api/http.html) core module) | Handles HTTP requests. | All | 
+([https](https://nodejs.org/api/https.html) core module) | Handles HTTPS requests. | All | 
+([tls](https://nodejs.org/api/tls.html) core module) | Reads and validates TLS certificates for use by HTTPS server. | All | 
+**[NPM](https://npmjs.com/) CLI v7** | Package manager | All | Build-time dependency.
+**[TypeScript](https://npmjs.com/package/typescript) v4** | JS preprocessor / static checker | All | TODO: Run this at build time.
+**[ts-node](https://npmjs.com/package/ts-node)** | Transpiles TS to JS at runtime. | All | TODO: Remove this and run TS transpiler at build time.
+**[@kubernetes/client-node](https://npmjs.com/package/@kubernetes/client-node)** | Kubernetes client library | Core, K8sCRDSessionStore | 
+**[http-proxy](https://npmjs.com/package/http-proxy)** | Facilitates proxying of HTTP connections to backend servers | Core | 
+**[cookie](https://npmjs.com/package/cookie)** | Parses and generates `Cookie`/`Set-Cookie` headers. Used for session management. | Core |
+**[uuid](https://npmjs.com/package/uuid)** | Generates UUIDs. Used for session management. | Core |
+**[openid-client](https://npmjs.com/package/openid-client)** | Performs OAuth / OIDC flows. | OpenIDConnectPlugin |
