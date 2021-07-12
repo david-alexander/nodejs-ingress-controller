@@ -5,7 +5,7 @@ Node.js-based ingress controller for Kubernetes
 
 This is an [ingress controller](https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/) for [Kubernetes](https://kubernetes.io/).
 
-Ingress controllers provide access to services running within a Kubernetes cluster, to clients outside the cluster. They can provide services such as SSL termination, authentication, and more.
+Ingress controllers provide access to services running within a Kubernetes cluster, to clients outside the cluster. They can provide features such as SSL termination, authentication, and more.
 
 This ingress controller is implemented in Node.js. This doesn't mean you can only use it with Node.js applications. However, if you need to add custom functionality to the ingress controller, you will find it easier if you're familiar with Node.js.
 
