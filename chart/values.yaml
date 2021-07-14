@@ -2,3 +2,4 @@ replicaCount: 1
 oidcDiscoveryUrl: YOUR_URL_HERE
 oidcClientId: YOUR_CLIENT_ID_HERE
 oidcClientSecret: YOUR_CLIENT_SECRET_HERE
+allocatePublicIPAddress: true
