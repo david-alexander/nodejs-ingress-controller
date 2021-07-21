@@ -117,6 +117,7 @@ export class OpenIDConnectPlugin extends Plugin
             request.req.headers['x-openid-id-token'] = tokens.id_token;
             request.req.headers['x-openid-refresh-token'] = tokens.refresh_token;
             request.req.headers['x-openid-claims'] = JSON.stringify(tokens.claims());
+            request.req.headers['x-openid-user'] = tokens.claims().email;
         }
     }
 }
