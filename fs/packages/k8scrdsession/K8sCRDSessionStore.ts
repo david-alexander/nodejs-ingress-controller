@@ -1,6 +1,7 @@
 import { SessionStore } from "nodejs-ingress-controller-core/SessionStore";
 import * as k8s from '@kubernetes/client-node';
 import { k8sApiCall } from "nodejs-ingress-controller-core/KubernetesUtils";
+import { Logger } from "../core/Logger";
 
 const API_GROUP = 'api.k8s.dma.net.nz';
 const API_VERSION = 'v1';
@@ -29,9 +30,9 @@ export class K8sCRDSessionStore extends SessionStore
         this.api = kc.makeApiClient(k8s.CustomObjectsApi);
     }
 
-    public async initialize()
+    public async initialize(logger: Logger)
     {
-
+        super.initialize(logger);
     }
 
     public async getSessionData(sessionID: string)

@@ -1,0 +1,16 @@
+{
+  "name": "nodejs-ingress-controller-plugin-otlplogger",
+  "version": "0.1.0",
+  "description": "",
+  "dependencies": {
+    "@opentelemetry/api": "^1.0.1",
+    "@opentelemetry/core": "^0.23.0",
+    "@opentelemetry/exporter-collector": "^0.23.0",
+    "@opentelemetry/node": "^0.23.0",
+    "@opentelemetry/propagator-b3": "^0.23.0",
+    "@opentelemetry/tracing": "^0.23.0",
+    "nodejs-ingress-controller-core": "workspace:*"
+  },
+  "author": "David Alexander",
+  "license": "MIT"
+}

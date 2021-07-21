@@ -12,9 +12,10 @@
     "@kubernetes/client-node": "^0.15.0",
     "@types/node": "^16.3.2",
     "nodejs-ingress-controller-core": "workspace:*",
+    "nodejs-ingress-controller-plugin-basicauth": "workspace:*",
+    "nodejs-ingress-controller-plugin-consolelogger": "workspace:*",
     "nodejs-ingress-controller-plugin-k8scrdsession": "workspace:*",
     "nodejs-ingress-controller-plugin-openid": "workspace:*",
-    "nodejs-ingress-controller-plugin-basicauth": "workspace:*",
     "ts-node": "^10.1.0",
     "typescript": "^4.3.5"
   }

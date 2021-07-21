@@ -5,10 +5,13 @@ import { Backend } from './Backend';
 import { TLSCertificate } from './TLSCertificate';
 import { Request, SNIRequest } from './Request';
 import { SessionStore } from './SessionStore';
+import { Logger, LogLevel } from './Logger';
+
+const LOG_COMPONENT = 'HTTPFrontend';
 
 export class HTTPFrontend
 {
-    public constructor(private sessionStore: SessionStore)
+    public constructor(private sessionStore: SessionStore, private logger: Logger)
     {
 
     }
@@ -22,6 +25,7 @@ export class HTTPFrontend
             {
                 if (req.headers?.host && req.url)
                 {
+                    this.logger.log(LOG_COMPONENT, LogLevel.TRACE, "Got HTTP request", { host: req.headers.host, path: req.url });
                     let request = await Request.load(req.headers.host, isSecure, new URL(req.url, `https://${req.headers.host}`), this.sessionStore, req, res);
                     let backend = await getBackend(request);
 
@@ -70,13 +74,18 @@ export class HTTPFrontend
     
         let httpsServer = https.createServer({
             SNICallback: async (serverName, cb) => {
+                this.logger.log(LOG_COMPONENT, LogLevel.TRACE, "Got SNI request", { serverName });
+
                 let certificate = await getCertificate(new SNIRequest(serverName));
+
                 if (certificate)
                 {
+                    this.logger.log(LOG_COMPONENT, LogLevel.TRACE, "Found certificate for SNI request", { serverName, secretName: certificate.secretName });
                     cb(null, certificate.secureContext!)
                 }
                 else
                 {
+                    this.logger.log(LOG_COMPONENT, LogLevel.TRACE, "Couldn't find certificate for SNI request", { serverName });
                     cb(new Error('Invalid hostname'), null!);
                 }
             }

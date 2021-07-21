@@ -5,9 +5,12 @@ export class TLSCertificate
 {
     secureContext: tls.SecureContext | null = null;
     hostnames: string[] | null = null;
+    public secretName: string;
 
     public constructor(secret: k8s.V1Secret)
     {
+        this.secretName = secret.metadata?.name!;
+        
         let altnames = (secret.metadata?.annotations || {})['cert-manager.io/alt-names'];
         if (altnames)
         {

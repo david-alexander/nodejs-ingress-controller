@@ -2,6 +2,7 @@ import { Plugin } from 'nodejs-ingress-controller-core/Plugin';
 import { PluginRequest } from 'nodejs-ingress-controller-core/PluginRequest'
 
 import * as openid from 'openid-client';
+import { Logger } from '../core/Logger';
 
 const DISCOVERY_URL = process.env.OIDC_DISCOVERY_URL || '';
 const CLIENT_ID = process.env.OIDC_CLIENT_ID || '';
@@ -13,8 +14,10 @@ export class OpenIDConnectPlugin extends Plugin
     private issuer: openid.Issuer<openid.Client>;
     private client: openid.Client;
 
-    public async initialize()
+    public async initialize(logger: Logger)
     {
+        super.initialize(logger);
+        
         this.issuer = await openid.Issuer.discover(DISCOVERY_URL)
         this.client = new this.issuer.Client({
             client_id: CLIENT_ID,

@@ -8,26 +8,31 @@ import { Plugin } from "./Plugin";
 import { SessionStore } from "./SessionStore";
 import { K8sCRDSessionStore } from "../k8scrdsession/K8sCRDSessionStore";
 import { PluginRequest } from "./PluginRequest";
+import { LogExporter } from './LogExporter';
+import { Logger } from './Logger';
 
 export class IngressController
 {
+    logger: Logger;
     cluster: KubernetesCluster;
     certificates: TLSCertificate[] = [];
     backends: Backend[] = [];
-    frontend = new HTTPFrontend(this.sessionStore);
+    frontend: HTTPFrontend;;
 
-    public constructor(kc: k8s.KubeConfig, private sessionStore: SessionStore, private plugins: Plugin[])
+    public constructor(logExporter: LogExporter, kc: k8s.KubeConfig, private sessionStore: SessionStore, private plugins: Plugin[])
     {
-        this.cluster = new KubernetesCluster(kc);
+        this.logger = new Logger(logExporter);
+        this.frontend = new HTTPFrontend(this.sessionStore, this.logger);
+        this.cluster = new KubernetesCluster(kc, this.logger);
     }
 
     public async run()
     {
-        this.sessionStore.initialize();
+        this.sessionStore.initialize(this.logger);
 
         for (let plugin of this.plugins)
         {
-            await plugin.initialize();
+            await plugin.initialize(this.logger);
         }
 
         this.frontend.start(

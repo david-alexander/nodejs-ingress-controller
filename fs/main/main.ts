@@ -1,5 +1,6 @@
 import * as k8s from '@kubernetes/client-node';
 import { IngressController } from 'nodejs-ingress-controller-core/IngressController';
+import { ConsoleLogExporter } from 'nodejs-ingress-controller-plugin-consolelogger/ConsoleLogExporter';
 import { OpenIDConnectPlugin } from 'nodejs-ingress-controller-plugin-openid/OpenIDConnectPlugin';
 import { BasicAuthPlugin } from 'nodejs-ingress-controller-plugin-basicauth/BasicAuthPlugin';
 import { K8sCRDSessionStore } from 'nodejs-ingress-controller-plugin-k8scrdsession/K8sCRDSessionStore';
@@ -12,6 +13,7 @@ async function main()
         kc.loadFromDefault();
         
         let server = new IngressController(
+            new ConsoleLogExporter(),
             kc,
             new K8sCRDSessionStore(kc),
             [

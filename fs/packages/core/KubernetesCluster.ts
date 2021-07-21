@@ -2,6 +2,7 @@ import * as k8s from '@kubernetes/client-node';
 import { TLSCertificate } from './TLSCertificate';
 import { Backend, BackendPathType } from './Backend';
 import { k8sApiCall } from './KubernetesUtils';
+import { Logger } from './Logger';
 
 const OUR_NAMESPACE = process.env.OUR_NAMESPACE || '';
 const OUR_SERVICE = process.env.OUR_SERVICE || '';
@@ -12,7 +13,7 @@ export class KubernetesCluster
     private k8sApi: k8s.CoreV1Api;
     private networkingApi: k8s.NetworkingV1Api;
 
-    public constructor(public kc: k8s.KubeConfig)
+    public constructor(public kc: k8s.KubeConfig, private logger: Logger)
     {
         this.k8sApi = this.kc.makeApiClient(k8s.CoreV1Api);
         this.networkingApi = this.kc.makeApiClient(k8s.NetworkingV1Api);
