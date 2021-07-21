@@ -1,30 +1,30 @@
+import * as k8s from '@kubernetes/client-node';
 import { HTTPFrontend } from "./HTTPFrontend";
 import { KubernetesCluster } from "./KubernetesCluster";
 import { TLSCertificate } from "./TLSCertificate";
 import { Backend } from "./Backend";
-import { OpenIDConnectPlugin } from "./plugins/OpenIDConnectPlugin";
 import { Request, SNIRequest } from "./Request";
 import { Plugin } from "./Plugin";
 import { SessionStore } from "./SessionStore";
-import { K8sCRDSessionStore } from "./sessionstore/K8sCRDSessionStore";
+import { K8sCRDSessionStore } from "../k8scrdsession/K8sCRDSessionStore";
 import { PluginRequest } from "./PluginRequest";
 
 export class IngressController
 {
-    cluster = new KubernetesCluster();
+    cluster: KubernetesCluster;
     certificates: TLSCertificate[] = [];
     backends: Backend[] = [];
-    plugins: Plugin[] = [new OpenIDConnectPlugin()];
-    sessionStore: SessionStore = new K8sCRDSessionStore(this.cluster.kc);
     frontend = new HTTPFrontend(this.sessionStore);
 
-    public constructor()
+    public constructor(kc: k8s.KubeConfig, private sessionStore: SessionStore, private plugins: Plugin[])
     {
-
+        this.cluster = new KubernetesCluster(kc);
     }
 
     public async run()
     {
+        this.sessionStore.initialize();
+
         for (let plugin of this.plugins)
         {
             await plugin.initialize();

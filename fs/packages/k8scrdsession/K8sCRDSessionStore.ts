@@ -1,6 +1,6 @@
-import { SessionStore } from "../SessionStore";
+import { SessionStore } from "nodejs-ingress-controller-core/SessionStore";
 import * as k8s from '@kubernetes/client-node';
-import { k8sApiCall } from "../KubernetesUtils";
+import { k8sApiCall } from "nodejs-ingress-controller-core/KubernetesUtils";
 
 const API_GROUP = 'api.k8s.dma.net.nz';
 const API_VERSION = 'v1';

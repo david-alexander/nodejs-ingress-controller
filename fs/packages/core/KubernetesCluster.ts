@@ -11,13 +11,9 @@ export class KubernetesCluster
 {
     private k8sApi: k8s.CoreV1Api;
     private networkingApi: k8s.NetworkingV1Api;
-    public kc: k8s.KubeConfig;
 
-    public constructor()
+    public constructor(public kc: k8s.KubeConfig)
     {
-        this.kc = new k8s.KubeConfig();
-        this.kc.loadFromDefault();
-        
         this.k8sApi = this.kc.makeApiClient(k8s.CoreV1Api);
         this.networkingApi = this.kc.makeApiClient(k8s.NetworkingV1Api);
     }

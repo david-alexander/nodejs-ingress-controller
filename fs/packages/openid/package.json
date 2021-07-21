@@ -1,0 +1,11 @@
+{
+  "name": "nodejs-ingress-controller-plugin-openid",
+  "version": "0.1.0",
+  "description": "",
+  "dependencies": {
+    "nodejs-ingress-controller-core": "workspace:*",
+    "openid-client": "^4.7.4"
+  },
+  "author": "David Alexander",
+  "license": "MIT"
+}

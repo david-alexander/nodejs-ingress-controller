@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: {{ $fullname }}
+  name: {{ .Release.Name }}
   labels:
     app.kubernetes.io/name: {{ .Chart.Name }}
     app.kubernetes.io/instance: {{ .Release.Name }}
@@ -14,15 +14,15 @@ metadata:
     app.kubernetes.io/name: {{ .Chart.Name }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: controller
-  name: {{ $fullname }}
-  namespace: {{ $fullname }}
+  name: {{ .Chart.Name }}
+  namespace: {{ .Release.Name }}
 automountServiceAccountToken: true
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  namespace: {{ $fullname }}
-  name: {{ $fullname }}-controller
+  namespace: {{ .Release.Name }}
+  name: {{ .Chart.Name }}-controller
   labels:
     app.kubernetes.io/name: {{ .Chart.Name }}
     app.kubernetes.io/instance: {{ .Release.Name }}
@@ -59,21 +59,20 @@ spec:
         - name: OIDC_CLIENT_SECRET
           value: {{ .Values.oidcClientSecret }}
         - name: OUR_NAMESPACE
-          value: {{ $fullname }}
+          value: {{ .Release.Name }}
         - name: OUR_SERVICE
-          value: {{ $fullname }}-controller
+          value: {{ .Chart.Name }}-controller
         - name: OUR_FIELD_MANAGER
-          value: {{ $fullname }}-controller
+          value: {{ .Chart.Name }}-controller
         resources:
           requests:
             cpu: 100m
             memory: 90Mi
       nodeSelector:
         kubernetes.io/os: linux
-      serviceAccountName: {{ $fullname }}
+      serviceAccountName: {{ .Chart.Name }}
       # terminationGracePeriodSeconds: 300
 ---
-{{- if .Values.allocatePublicIPAddress }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -81,11 +80,15 @@ metadata:
     app.kubernetes.io/name: {{ .Chart.Name }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: controller
-  name: {{ $fullname }}-controller
-  namespace: {{ $fullname }}
+  name: {{ .Chart.Name }}-controller
+  namespace: {{ .Release.Name }}
 spec:
+  {{- if .Values.allocatePublicIPAddress }}
   type: LoadBalancer
   externalTrafficPolicy: Cluster
+  {{- else }}
+  type: ClusterIP
+  {{- end }}
   ports:
     - name: http
       port: 80
@@ -99,7 +102,6 @@ spec:
     app.kubernetes.io/name: {{ .Chart.Name }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: controller
-{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -191,8 +193,8 @@ roleRef:
   name: {{ $fullname }}
 subjects:
   - kind: ServiceAccount
-    name: {{ $fullname }}
-    namespace: {{ $fullname }}
+    name: {{ .Chart.Name }}
+    namespace: {{ .Release.Name }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -201,8 +203,8 @@ metadata:
     app.kubernetes.io/name: {{ .Chart.Name }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: controller
-  name: {{ $fullname }}
-  namespace: {{ $fullname }}
+  name: {{ .Chart.Name }}
+  namespace: {{ .Release.Name }}
 rules:
   - apiGroups:
       - ''
@@ -295,16 +297,16 @@ metadata:
     app.kubernetes.io/name: {{ .Chart.Name }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: controller
-  name: {{ $fullname }}
-  namespace: {{ $fullname }}
+  name: {{ .Chart.Name }}
+  namespace: {{ .Release.Name }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ $fullname }}
+  name: {{ .Chart.Name }}
 subjects:
   - kind: ServiceAccount
-    name: {{ $fullname }}
-    namespace: {{ $fullname }}
+    name: {{ .Chart.Name }}
+    namespace: {{ .Release.Name }}
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition

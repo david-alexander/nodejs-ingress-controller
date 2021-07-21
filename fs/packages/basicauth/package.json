@@ -1,0 +1,10 @@
+{
+  "name": "nodejs-ingress-controller-plugin-basicauth",
+  "version": "0.1.0",
+  "description": "",
+  "dependencies": {
+    "nodejs-ingress-controller-core": "workspace:*"
+  },
+  "author": "David Alexander",
+  "license": "MIT"
+}

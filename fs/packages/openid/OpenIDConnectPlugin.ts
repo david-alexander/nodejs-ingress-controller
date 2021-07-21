@@ -1,5 +1,5 @@
-import { Plugin } from '../Plugin';
-import { PluginRequest } from "../PluginRequest";
+import { Plugin } from 'nodejs-ingress-controller-core/Plugin';
+import { PluginRequest } from 'nodejs-ingress-controller-core/PluginRequest'
 
 import * as openid from 'openid-client';
 

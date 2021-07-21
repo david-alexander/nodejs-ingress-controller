@@ -1,0 +1,11 @@
+{
+  "name": "nodejs-ingress-controller-plugin-k8scrdsession",
+  "version": "0.1.0",
+  "description": "",
+  "dependencies": {
+    "@kubernetes/client-node": "^0.15.0",
+    "nodejs-ingress-controller-core": "workspace:*"
+  },
+  "author": "David Alexander",
+  "license": "MIT"
+}

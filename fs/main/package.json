@@ -1,0 +1,21 @@
+{
+  "name": "ingress-nodejs",
+  "version": "0.1.0",
+  "description": "NodeJS ingress controller for Kubernetes.",
+  "main": "start.js",
+  "scripts": {
+    "dev": "node start.js"
+  },
+  "author": "David Alexander <david.m.alexander.1@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@kubernetes/client-node": "^0.15.0",
+    "@types/node": "^16.3.2",
+    "nodejs-ingress-controller-core": "workspace:*",
+    "nodejs-ingress-controller-plugin-k8scrdsession": "workspace:*",
+    "nodejs-ingress-controller-plugin-openid": "workspace:*",
+    "nodejs-ingress-controller-plugin-basicauth": "workspace:*",
+    "ts-node": "^10.1.0",
+    "typescript": "^4.3.5"
+  }
+}

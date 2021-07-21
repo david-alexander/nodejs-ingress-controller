@@ -1,8 +1,10 @@
 FROM node:14-alpine
 
 WORKDIR /app
-ADD package*.json ./
-RUN npm ci
-ADD . ./
 
-ENTRYPOINT [ "node", "start.js" ]
+ADD . /app
+RUN --mount=type=cache,id=yarn,target=/root/.yarn,sharing=locked rm -f /root/.yarn/berry/cache/*.flock && yarn
+
+WORKDIR /app/main
+
+ENTRYPOINT [ "yarn", "run", "dev" ]
