@@ -4,6 +4,8 @@ import { PluginRequest } from 'nodejs-ingress-controller-core/PluginRequest'
 import * as openid from 'openid-client';
 import { Logger } from '../core/Logger';
 
+import * as JwtVerifier from '@okta/jwt-verifier';
+
 const DISCOVERY_URL = process.env.OIDC_DISCOVERY_URL || '';
 const CLIENT_ID = process.env.OIDC_CLIENT_ID || '';
 const CLIENT_SECRET = process.env.OIDC_CLIENT_SECRET || '';
@@ -13,17 +15,24 @@ export class OpenIDConnectPlugin extends Plugin
 {
     private issuer: openid.Issuer<openid.Client>;
     private client: openid.Client;
+    private jwtVerifier: JwtVerifier;
 
     public async initialize(logger: Logger)
     {
         super.initialize(logger);
         
-        this.issuer = await openid.Issuer.discover(DISCOVERY_URL)
+        this.issuer = await openid.Issuer.discover(DISCOVERY_URL);
         this.client = new this.issuer.Client({
             client_id: CLIENT_ID,
             client_secret: CLIENT_SECRET,
             response_types: ['code']
         });
+
+        this.jwtVerifier = new JwtVerifier({
+            issuer: this.issuer.metadata.issuer,
+            clientId: CLIENT_ID,
+            jwksUri: this.issuer.metadata.jwks_uri
+        } as any);
     }
 
     public async onRequest(pr: PluginRequest)
@@ -37,6 +46,33 @@ export class OpenIDConnectPlugin extends Plugin
         {
             const extraScopes = (backend.ingress.metadata?.annotations || {})['oidc.api.k8s.dma.net.nz/extraScopes'] || "";
             const allowAuthorizationHeader = (backend.ingress.metadata?.annotations || {})['oidc.api.k8s.dma.net.nz/allowAuthorizationHeader'] == "true";
+
+            if (allowAuthorizationHeader)
+            {
+                let idTokenFromHeader = request.req.headers['authorization'];
+
+                if (idTokenFromHeader)
+                {
+                    let token = idTokenFromHeader;
+                    try
+                    {
+                        let result = await this.jwtVerifier.verifyIdToken(token, CLIENT_ID, '');
+
+                        request.req.headers['x-openid-id-token'] = idTokenFromHeader;
+                    }
+                    catch (e)
+                    {
+                        await request.respond(async (res) => {
+                            res.writeHead(401, {
+                            });
+                            res.end();
+                        });
+    
+                    }
+
+                    return;
+                }
+            }
 
             const redirectUri = `${request.hostname == 'localhost' ? 'http' : 'https'}://${request.hostname}/redirect_uri`;
             let tokens = request.session.data.tokens ? new openid.TokenSet(request.session.data.tokens) : null;

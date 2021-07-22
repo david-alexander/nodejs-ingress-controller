@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "",
   "dependencies": {
+    "@okta/jwt-verifier": "^2.3.0",
     "nodejs-ingress-controller-core": "workspace:*",
     "openid-client": "^4.7.4"
   },
