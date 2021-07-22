@@ -15,6 +15,7 @@ export class SNIRequest
 export class Request extends SNIRequest
 {
     private _hasBeenRespondedTo = false;
+    private responseHeaders: { name: string, value: string }[] = [];
 
     public constructor(
         hostname: string,
@@ -46,6 +47,11 @@ export class Request extends SNIRequest
         return this._hasBeenRespondedTo;
     }
 
+    public addResponseHeader(name: string, value: string)
+    {
+        this.responseHeaders.push({ name, value });
+    }
+
     public async respond(func: (res: http.ServerResponse) => Promise<void>)
     {
         if (!this._hasBeenRespondedTo)
@@ -55,6 +61,10 @@ export class Request extends SNIRequest
             if (this.isSecure)
             {
                 this.res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+            }
+            for (let header of this.responseHeaders)
+            {
+                this.res.setHeader(header.name, header.value);
             }
             await func(this.res);
         }

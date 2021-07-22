@@ -45,32 +45,48 @@ export class OpenIDConnectPlugin extends Plugin
         if (isEnabled)
         {
             const extraScopes = (backend.ingress.metadata?.annotations || {})['oidc.api.k8s.dma.net.nz/extraScopes'] || "";
-            const allowAuthorizationHeader = (backend.ingress.metadata?.annotations || {})['oidc.api.k8s.dma.net.nz/allowAuthorizationHeader'] == "true";
+            const allowAccessTokenInHeader = (backend.ingress.metadata?.annotations || {})['oidc.api.k8s.dma.net.nz/allowAccessTokenInHeader'] == "true";
 
-            if (allowAuthorizationHeader)
+            if (allowAccessTokenInHeader)
             {
-                let idTokenFromHeader = request.req.headers['authorization'];
+                request.addResponseHeader('Access-Control-Allow-Origin', '*');
+                request.addResponseHeader('Access-Control-Allow-Headers', 'X-OpenID-ID-Token, Content-Type');
+                request.addResponseHeader('Access-Control-Allow-Methods', '*');
 
-                if (idTokenFromHeader)
+                if (request.req.method == 'OPTIONS')
                 {
-                    let token = idTokenFromHeader;
-                    try
-                    {
-                        let result = await this.jwtVerifier.verifyIdToken(token, CLIENT_ID, '');
-
-                        request.req.headers['x-openid-id-token'] = idTokenFromHeader;
-                    }
-                    catch (e)
-                    {
-                        await request.respond(async (res) => {
-                            res.writeHead(401, {
-                            });
-                            res.end();
+                    await request.respond(async (res) => {
+                        res.writeHead(200, {
                         });
-    
-                    }
-
+                        res.end();
+                    });
                     return;
+                }
+                else
+                {
+                    let idTokenFromHeader = request.req.headers['x-openid-id-token'];
+
+                    if (idTokenFromHeader)
+                    {
+                        let token = Array.isArray(idTokenFromHeader) ? idTokenFromHeader[0] : idTokenFromHeader;
+                        try
+                        {
+                            let result = await this.jwtVerifier.verifyIdToken(token, CLIENT_ID, '');
+
+                            request.req.headers['x-openid-id-token'] = idTokenFromHeader;
+                        }
+                        catch (e)
+                        {
+                            await request.respond(async (res) => {
+                                res.writeHead(401, {
+                                });
+                                res.end();
+                            });
+        
+                        }
+
+                        return;
+                    }
                 }
             }
 
