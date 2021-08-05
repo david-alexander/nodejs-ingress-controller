@@ -57,13 +57,21 @@ export class KubernetesCluster
                                 if (ingressTLS.secretName)
                                 {
                                     let secretName = ingressTLS.secretName;
-                                    let secret = await k8sApiCall(() => this.k8sApi.readNamespacedSecret(secretName, ingressNamespace));
-                                    let certificate = new TLSCertificate(secret.body);
-                                    
-                                    if (certificate.isValidForHost(host))
+
+                                    try
                                     {
-                                        isSecure = true;
-                                        certificates.push(certificate);
+                                        let secret = await k8sApiCall(() => this.k8sApi.readNamespacedSecret(secretName, ingressNamespace));
+                                        let certificate = new TLSCertificate(secret.body);
+                                        
+                                        if (certificate.isValidForHost(host))
+                                        {
+                                            isSecure = true;
+                                            certificates.push(certificate);
+                                        }
+                                    }
+                                    catch (e)
+                                    {
+                                        // Secret might not exist yet.
                                     }
                                 }
                             }
