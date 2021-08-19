@@ -8,7 +8,32 @@ let proxy = httpProxy.createProxyServer({
     proxyTimeout: 60 * 60 * 1000
 });
 
-export class Backend
+export abstract class Backend
+{
+    protected constructor(
+        public isSecure: boolean
+    )
+    {
+
+    }
+
+    abstract handleRequest(request: Request): Promise<void>;
+}
+
+export class DummyBackend extends Backend
+{
+    public constructor()
+    {
+        super(false);
+    }
+    
+    async handleRequest(request: Request)
+    {
+
+    }
+}
+
+export class HTTPBackend extends Backend
 {
     public constructor(
         public host: string,
@@ -16,11 +41,11 @@ export class Backend
         public pathType: BackendPathType,
         public ipAddress: string,
         public port: number,
-        public isSecure: boolean,
+        isSecure: boolean,
         public ingress: V1Ingress
     )
     {
-
+        super(isSecure);
     }
 
     async handleRequest(request: Request)

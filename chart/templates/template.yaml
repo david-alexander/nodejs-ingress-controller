@@ -58,6 +58,8 @@ spec:
           value: {{ .Values.oidcClientId }}
         - name: OIDC_CLIENT_SECRET
           value: {{ .Values.oidcClientSecret }}
+        - name: OIDC_REDIRECT_TO_LOCALHOST
+          value: {{ .Values.oidcRedirectToLocalhost | quote }}
         - name: OUR_NAMESPACE
           value: {{ .Release.Name }}
         - name: OUR_SERVICE

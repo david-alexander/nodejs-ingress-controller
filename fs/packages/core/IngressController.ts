@@ -2,7 +2,7 @@ import * as k8s from '@kubernetes/client-node';
 import { HTTPFrontend } from "./HTTPFrontend";
 import { KubernetesCluster } from "./KubernetesCluster";
 import { TLSCertificate } from "./TLSCertificate";
-import { Backend } from "./Backend";
+import { Backend, DummyBackend, HTTPBackend } from "./Backend";
 import { Request, SNIRequest } from "./Request";
 import { Plugin } from "./Plugin";
 import { SessionStore } from "./SessionStore";
@@ -11,12 +11,14 @@ import { PluginRequest } from "./PluginRequest";
 import { LogExporter } from './LogExporter';
 import { Logger } from './Logger';
 
+const REDIRECT_TO_LOCALHOST = process.env.OIDC_REDIRECT_TO_LOCALHOST == '1';
+
 export class IngressController
 {
     logger: Logger;
     cluster: KubernetesCluster;
     certificates: TLSCertificate[] = [];
-    backends: Backend[] = [];
+    backends: HTTPBackend[] = [];
     frontend: HTTPFrontend;;
 
     public constructor(logExporter: LogExporter, kc: k8s.KubeConfig, private sessionStore: SessionStore, private plugins: Plugin[])
@@ -69,8 +71,13 @@ export class IngressController
         }
     }
 
-    private async findBackend(request: Request)
+    private async findBackend(request: Request): Promise<Backend | null>
     {
+        if (REDIRECT_TO_LOCALHOST && request.hostname == 'localhost')
+        {
+            return new DummyBackend();
+        }
+
         for (let backend of this.backends)
         {
             if (backend.host == request.hostname)

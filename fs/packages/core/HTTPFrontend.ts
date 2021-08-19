@@ -1,5 +1,6 @@
 import * as http from 'http';
 import * as https from 'https';
+import * as tls from 'tls';
 
 import { Backend } from './Backend';
 import { TLSCertificate } from './TLSCertificate';
@@ -26,7 +27,7 @@ export class HTTPFrontend
                 if (req.headers?.host && req.url)
                 {
                     this.logger.log(LOG_COMPONENT, LogLevel.TRACE, "Got HTTP request", { host: req.headers.host, path: req.url });
-                    let request = await Request.load(req.headers.host, isSecure, new URL(req.url, `https://${req.headers.host}`), this.sessionStore, req, res);
+                    let request = await Request.load(req.headers.host, isSecure, new URL(req.url, `${(req.socket instanceof tls.TLSSocket) ? 'https' : 'http'}://${req.headers.host}`), this.sessionStore, req, res);
                     let backend = await getBackend(request);
 
                     if (backend?.isSecure && !request.isSecure)

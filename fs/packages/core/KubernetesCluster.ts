@@ -1,6 +1,6 @@
 import * as k8s from '@kubernetes/client-node';
 import { TLSCertificate } from './TLSCertificate';
-import { Backend, BackendPathType } from './Backend';
+import { Backend, BackendPathType, HTTPBackend } from './Backend';
 import { k8sApiCall } from './KubernetesUtils';
 import { Logger } from './Logger';
 
@@ -28,7 +28,7 @@ export class KubernetesCluster
     async processIngresses()
     {
         let certificates: TLSCertificate[] = [];
-        let backends: Backend[] = [];
+        let backends: HTTPBackend[] = [];
 
         let ourServiceIngress = await this.getOurServiceIngress();
 
@@ -87,7 +87,7 @@ export class KubernetesCluster
                                     
                                     if (serviceInfo.spec?.clusterIP && path.path && path.pathType && service.port)
                                     {
-                                        let backend = new Backend(
+                                        let backend = new HTTPBackend(
                                             host,
                                             path.path,
                                             path.pathType as BackendPathType,

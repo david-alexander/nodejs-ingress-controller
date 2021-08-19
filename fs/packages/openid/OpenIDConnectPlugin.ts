@@ -5,10 +5,12 @@ import * as openid from 'openid-client';
 import { Logger } from '../core/Logger';
 
 import * as JwtVerifier from '@okta/jwt-verifier';
+import { HTTPBackend } from '../core/Backend';
 
 const DISCOVERY_URL = process.env.OIDC_DISCOVERY_URL || '';
 const CLIENT_ID = process.env.OIDC_CLIENT_ID || '';
 const CLIENT_SECRET = process.env.OIDC_CLIENT_SECRET || '';
+const REDIRECT_TO_LOCALHOST = process.env.OIDC_REDIRECT_TO_LOCALHOST == '1';
 const SCOPES = "openid email profile offline_access";
 
 export class OpenIDConnectPlugin extends Plugin
@@ -38,6 +40,35 @@ export class OpenIDConnectPlugin extends Plugin
     public async onRequest(pr: PluginRequest)
     {
         const request = pr.request;
+
+        if (REDIRECT_TO_LOCALHOST && request.hostname == 'localhost')
+        {
+            let callbackParams = this.client.callbackParams(request.url.search);
+            let nextHostname = callbackParams.state!;
+
+            if (nextHostname && nextHostname != 'localhost')
+            {
+                const actualRedirect = new URL(request.url.toString());
+                actualRedirect.hostname = nextHostname;
+                
+                await request.respond(async (res) => {
+                    res.writeHead(302, {
+                        'Location': actualRedirect.toString()
+                    });
+                    res.end();
+                });
+                
+                return;
+            }
+
+            return;
+        }
+
+        if (!(pr.backend instanceof HTTPBackend))
+        {
+            return;
+        }
+
         const backend = pr.backend;
 
         const isEnabled = (backend.ingress.metadata?.annotations || {})['oidc.api.k8s.dma.net.nz/requireAuth'] == "true";
@@ -90,16 +121,19 @@ export class OpenIDConnectPlugin extends Plugin
                 }
             }
 
-            const redirectUri = `${request.hostname == 'localhost' ? 'http' : 'https'}://${request.hostname}/redirect_uri`;
+            const redirectUri = REDIRECT_TO_LOCALHOST ? 'http://localhost/redirect_uri' : `https://${request.hostname}/redirect_uri`;
             let tokens = request.session.data.tokens ? new openid.TokenSet(request.session.data.tokens) : null;
             
             try
             {
                 if (request.url.pathname == '/redirect_uri')
                 {
-                    let tokens = await this.client.callback(redirectUri, this.client.callbackParams(request.url.search), {
+                    let callbackParams = this.client.callbackParams(request.url.search);
+
+                    let tokens = await this.client.callback(redirectUri, callbackParams, {
                         response_type: 'code',
-                        code_verifier: request.session.data.codeVerifier
+                        code_verifier: request.session.data.codeVerifier,
+                        state: callbackParams.state
                     });
                     
                     request.session.data.tokens = tokens;
@@ -142,7 +176,8 @@ export class OpenIDConnectPlugin extends Plugin
                         scope: `${SCOPES} ${extraScopes}`,
                         code_challenge: codeChallenge,
                         code_challenge_method: 'S256',
-                        redirect_uri: redirectUri
+                        redirect_uri: redirectUri,
+                        state: request.url.hostname
                     });
 
                     request.session.data.nextPath = request.url.pathname;

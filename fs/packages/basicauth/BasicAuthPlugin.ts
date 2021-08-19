@@ -1,5 +1,6 @@
 import { Plugin } from 'nodejs-ingress-controller-core/Plugin';
 import { PluginRequest } from 'nodejs-ingress-controller-core/PluginRequest'
+import { HTTPBackend } from '../core/Backend';
 import { Logger } from '../core/Logger';
 
 export class BasicAuthPlugin extends Plugin
@@ -11,6 +12,11 @@ export class BasicAuthPlugin extends Plugin
 
     public async onRequest(pr: PluginRequest)
     {
+        if (!(pr.backend instanceof HTTPBackend))
+        {
+            return;
+        }
+
         const request = pr.request;
         const backend = pr.backend;
 
