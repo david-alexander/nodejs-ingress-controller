@@ -51,14 +51,24 @@ export class HTTPBackend extends Backend
 
     async handleRequest(request: Request)
     {
-        await request.respond(async (res) => {
-            proxy.web(request.req, res, { target: `http://${this.ipAddress}:${this.port}` }, (err) => {
-                if (!res.headersSent)
-                {
-                    res.writeHead(502);
-                }
-                res.end('Bad Gateway');
+        if (request.output.isWebSocket)
+        {
+            proxy.ws(request.req, request.output.socket, request.output.head, { target: `http://${this.ipAddress}:${this.port}` }, (err) => {
+                console.log(err);
             });
-        })
+        }
+        else
+        {
+            await request.respond(async (res) => {
+                proxy.web(request.req, res, { target: `http://${this.ipAddress}:${this.port}` }, (err) => {
+                    console.log(err);
+                    if (!res.headersSent)
+                    {
+                        res.writeHead(502);
+                    }
+                    res.end('Bad Gateway');
+                });
+            })
+        }
     }
 }

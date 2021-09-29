@@ -1,6 +1,7 @@
 import * as http from 'http';
 import * as https from 'https';
 import * as tls from 'tls';
+import * as stream from 'stream';
 
 import { Backend } from './Backend';
 import { TLSCertificate } from './TLSCertificate';
@@ -21,14 +22,14 @@ export class HTTPFrontend
         getBackend: (request: Request) => Promise<Backend | null>,
         getCertificate: (request: SNIRequest) => Promise<TLSCertificate | null>)
     {
-        let handleRequest = async (isSecure: boolean, req: http.IncomingMessage, res: http.ServerResponse) => {
+        let handleRequest = async (isSecure: boolean, req: http.IncomingMessage, output: { isWebSocket: false, res: http.ServerResponse } | { isWebSocket: true, socket: any, head: any }) => {
             try
             {
                 if (req.headers?.host && req.url)
                 {
                     this.logger.log(LOG_COMPONENT, LogLevel.TRACE, "Got HTTP request", { host: req.headers.host, path: req.url });
-                    let request = await Request.load(req.headers.host, isSecure, new URL(req.url, `${(req.socket instanceof tls.TLSSocket) ? 'https' : 'http'}://${req.headers.host}`), this.sessionStore, req, res);
-                    let backend = await getBackend(request);
+                    let request = await Request.load(req.headers.host, isSecure, new URL(req.url, `${(req.socket instanceof tls.TLSSocket) ? 'https' : 'http'}://${req.headers.host}`), this.sessionStore, req, output);
+                    let backend = await getBackend(request); 
 
                     if (backend?.isSecure && !request.isSecure)
                     {
@@ -60,11 +61,14 @@ export class HTTPFrontend
                 console.log(e);
                 try
                 {
-                    if (!res.headersSent)
+                    if (!output.isWebSocket)
                     {
-                        res.writeHead(502);
+                        if (!output.res.headersSent)
+                        {
+                            output.res.writeHead(502);
+                        }
+                        output.res.end('Bad Gateway');
                     }
-                    res.end('Bad Gateway');
                 }
                 catch (e)
                 {
@@ -91,7 +95,7 @@ export class HTTPFrontend
                 }
             }
         }, (req, res) => {
-            handleRequest(true, req, res);
+            handleRequest(true, req, { isWebSocket: false, res });
         });
     
         httpsServer.on('error', (err) => {
@@ -101,7 +105,15 @@ export class HTTPFrontend
         httpsServer.listen(443);
     
         let httpServer = http.createServer((req, res) => {
-            handleRequest(false, req, res);
+            handleRequest(false, req, { isWebSocket: false, res });
+        });
+    
+        httpServer.on('upgrade', (req, socket: stream.Duplex, head: Buffer) => {
+            handleRequest(false, req, { isWebSocket: true, socket, head });
+        });
+    
+        httpsServer.on('upgrade', (req, socket: stream.Duplex, head: Buffer) => {
+            handleRequest(true, req, { isWebSocket: true, socket, head });
         });
     
         httpServer.on('error', (err) => {

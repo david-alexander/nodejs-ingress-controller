@@ -23,7 +23,7 @@ export class Request extends SNIRequest
         public url: URL,
         public session: Session,
         public req: http.IncomingMessage,
-        private res: http.ServerResponse
+        public output: { isWebSocket: false, res: http.ServerResponse } | { isWebSocket: true, socket: any, head: any }
     )
     {
         super(hostname);
@@ -35,11 +35,11 @@ export class Request extends SNIRequest
         url: URL,
         sessionStore: SessionStore,
         req: http.IncomingMessage,
-        res: http.ServerResponse,
+        output: { isWebSocket: false, res: http.ServerResponse } | { isWebSocket: true, socket: any, head: any }
     )
     {
         let session = await Session.load(sessionStore, isSecure, req);
-        return new Request(hostname, isSecure, url, session, req, res);
+        return new Request(hostname, isSecure, url, session, req, output);
     }
 
     public get hasBeenRespondedTo()
@@ -57,16 +57,20 @@ export class Request extends SNIRequest
         if (!this._hasBeenRespondedTo)
         {
             this._hasBeenRespondedTo = true;
-            await this.session.save(this, this.res);
-            if (this.isSecure)
+
+            if (!this.output.isWebSocket)
             {
-                this.res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+                await this.session.save(this, this.output.res);
+                if (this.isSecure)
+                {
+                    this.output.res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+                }
+                for (let header of this.responseHeaders)
+                {
+                    this.output.res.setHeader(header.name, header.value);
+                }
+                await func(this.output.res);
             }
-            for (let header of this.responseHeaders)
-            {
-                this.res.setHeader(header.name, header.value);
-            }
-            await func(this.res);
         }
     }
 }
