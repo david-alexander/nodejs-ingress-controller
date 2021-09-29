@@ -173,7 +173,7 @@ rules:
   - apiGroups:
       - api.k8s.dma.net.nz
     resources:
-      - sessions
+      - tempsessions
     verbs:
       - get
       - list
@@ -283,7 +283,7 @@ rules:
   - apiGroups:
       - api.k8s.dma.net.nz
     resources:
-      - sessions
+      - tempsessions
     verbs:
       - get
       - list
