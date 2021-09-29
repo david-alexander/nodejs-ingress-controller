@@ -5,7 +5,8 @@ import { Request } from './Request';
 export type BackendPathType = 'Exact' | 'Prefix' | 'ImplementationSpecific';
 
 let proxy = httpProxy.createProxyServer({
-    proxyTimeout: 60 * 60 * 1000
+    proxyTimeout: 60 * 60 * 1000,
+    ws: true
 });
 
 export abstract class Backend
