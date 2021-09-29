@@ -14,9 +14,11 @@ function getCookieName(isSecure: boolean)
 
 export class Session
 {
+    private loadedDataJSON: any;
+
     private constructor(private sessionStore: SessionStore, private id: string, private _data: any)
     {
-
+        this.loadedDataJSON = JSON.stringify(_data);
     }
 
     public get data()
@@ -34,7 +36,11 @@ export class Session
 
     public async save(request: Request, res: http.ServerResponse)
     {
-        await this.sessionStore.setSessionData(this.id, this._data);
+        if (JSON.stringify(this._data) != this.loadedDataJSON)
+        {
+            await this.sessionStore.setSessionData(this.id, this._data);
+        }
+        
         res.setHeader('Set-Cookie', cookie.serialize(getCookieName(request.isSecure), this.id, {
             sameSite: 'lax',
             httpOnly: true,

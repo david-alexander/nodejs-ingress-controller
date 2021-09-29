@@ -5,8 +5,8 @@ import { Logger } from "../core/Logger";
 
 const API_GROUP = 'api.k8s.dma.net.nz';
 const API_VERSION = 'v1';
-const CRD_NAME_SINGULAR = 'Session';
-const CRD_NAME_PLURAL = 'sessions';
+const CRD_NAME_SINGULAR = 'TempSession';
+const CRD_NAME_PLURAL = 'tempsessions';
 const NAMESPACE = process.env.OUR_NAMESPACE || '';
 
 type SessionCRDObject = {
