@@ -23,6 +23,7 @@ type SessionCRDObject = {
 export class K8sCRDSessionStore extends SessionStore
 {
     private api: k8s.CustomObjectsApi;
+    private tempSessionStore: { [sessionID: string]: any } = {};
 
     public constructor(kc: k8s.KubeConfig)
     {
@@ -37,45 +38,49 @@ export class K8sCRDSessionStore extends SessionStore
 
     public async getSessionData(sessionID: string)
     {
-        try
-        {
-            let object = (await k8sApiCall(() => this.api.getNamespacedCustomObject(API_GROUP, API_VERSION, NAMESPACE, CRD_NAME_PLURAL, sessionID))).body as (SessionCRDObject | undefined);
-            return object?.spec.data;
-        }
-        catch (e)
-        {
-            return undefined;
-        }
+        // try
+        // {
+        //     let object = (await k8sApiCall(() => this.api.getNamespacedCustomObject(API_GROUP, API_VERSION, NAMESPACE, CRD_NAME_PLURAL, sessionID))).body as (SessionCRDObject | undefined);
+        //     return object?.spec.data;
+        // }
+        // catch (e)
+        // {
+        //     return undefined;
+        // }
+        return this.tempSessionStore[sessionID];
     }
 
     public async setSessionData(sessionID: string, data: any)
     {
-        let object: SessionCRDObject = {
-            kind: CRD_NAME_SINGULAR,
-            apiVersion: `${API_GROUP}/${API_VERSION}`,
-            metadata: {
-                name: sessionID
-            },
-            spec: {
-                data: data
-            }
-        };
-        try
-        {
-            await k8sApiCall(() => this.api.createNamespacedCustomObject(API_GROUP, API_VERSION, NAMESPACE, CRD_NAME_PLURAL, object));
-        }
-        catch (e)
-        {
-            await k8sApiCall(() => this.api.patchNamespacedCustomObject(API_GROUP, API_VERSION, NAMESPACE, CRD_NAME_PLURAL, sessionID, object, undefined, undefined, undefined, {
-                headers: {
-                    'Content-type': k8s.PatchUtils.PATCH_FORMAT_JSON_MERGE_PATCH
-                }
-            }));
-        }
+        // let object: SessionCRDObject = {
+        //     kind: CRD_NAME_SINGULAR,
+        //     apiVersion: `${API_GROUP}/${API_VERSION}`,
+        //     metadata: {
+        //         name: sessionID
+        //     },
+        //     spec: {
+        //         data: data
+        //     }
+        // };
+        // try
+        // {
+        //     await k8sApiCall(() => this.api.createNamespacedCustomObject(API_GROUP, API_VERSION, NAMESPACE, CRD_NAME_PLURAL, object));
+        // }
+        // catch (e)
+        // {
+        //     console.log(e);
+        //     await k8sApiCall(() => this.api.patchNamespacedCustomObject(API_GROUP, API_VERSION, NAMESPACE, CRD_NAME_PLURAL, sessionID, object, undefined, undefined, undefined, {
+        //         headers: {
+        //             'Content-type': k8s.PatchUtils.PATCH_FORMAT_JSON_MERGE_PATCH
+        //         }
+        //     }));
+        // }
+        this.tempSessionStore[sessionID] = data;
     }
 
     public async deleteSession(sessionID: string)
     {
-        await k8sApiCall(() => this.api.deleteNamespacedCustomObject(API_GROUP, API_VERSION, NAMESPACE, CRD_NAME_PLURAL, sessionID));
+        // await k8sApiCall(() => this.api.deleteNamespacedCustomObject(API_GROUP, API_VERSION, NAMESPACE, CRD_NAME_PLURAL, sessionID));
+        delete this.tempSessionStore[sessionID];
     }
 }

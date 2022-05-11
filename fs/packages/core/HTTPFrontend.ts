@@ -29,7 +29,9 @@ export class HTTPFrontend
                 {
                     this.logger.log(LOG_COMPONENT, LogLevel.TRACE, "Got HTTP request", { host: req.headers.host, path: req.url });
                     let request = await Request.load(req.headers.host, isSecure, new URL(req.url, `${(req.socket instanceof tls.TLSSocket) ? 'https' : 'http'}://${req.headers.host}`), this.sessionStore, req, output);
+                    this.logger.log(LOG_COMPONENT, LogLevel.TRACE, "Request loaded", { host: req.headers.host, path: req.url });
                     let backend = await getBackend(request); 
+                    this.logger.log(LOG_COMPONENT, LogLevel.TRACE, "Got backend", { host: req.headers.host, path: req.url });
 
                     if (backend?.isSecure && !request.isSecure)
                     {

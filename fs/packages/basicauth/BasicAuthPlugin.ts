@@ -25,11 +25,13 @@ export class BasicAuthPlugin extends Plugin
         if (isEnabled)
         {
             const expectedAuthHeader = (backend.ingress.metadata?.annotations || {})['basicauth.api.k8s.dma.net.nz/expectedAuthHeader'] || "";
+            const realm = (backend.ingress.metadata?.annotations || {})['basicauth.api.k8s.dma.net.nz/realm'] || "";
 
             if (request.req.headers['authorization'] != expectedAuthHeader)
             {
                 await request.respond(async (res) => {
                     res.writeHead(401, {
+                        'WWW-Authenticate': `Basic realm="${encodeURIComponent(realm)}", charset="UTF-8"`
                     });
                     res.end();
                 });

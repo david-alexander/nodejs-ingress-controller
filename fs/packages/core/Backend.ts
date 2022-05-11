@@ -1,12 +1,17 @@
 import { V1Ingress } from '@kubernetes/client-node';
 import * as httpProxy from 'http-proxy';
+import * as http from 'http';
 import { Request } from './Request';
 
 export type BackendPathType = 'Exact' | 'Prefix' | 'ImplementationSpecific';
 
 let proxy = httpProxy.createProxyServer({
     proxyTimeout: 60 * 60 * 1000,
-    ws: true
+    ws: true,
+    agent: new http.Agent({
+        keepAlive: true,
+        maxSockets: 100
+    })
 });
 
 export abstract class Backend
@@ -49,6 +54,29 @@ export class HTTPBackend extends Backend
         super(isSecure);
     }
 
+    isBetterMatchForRequestThan(otherBackend: HTTPBackend | null, request: Request)
+    {
+        if (this.host == request.hostname)
+        {
+            if (this.pathType == 'Exact' && request.url.pathname == this.path)
+            {
+                return true;
+            }
+            if (this.pathType == 'ImplementationSpecific' && request.url.pathname == this.path)
+            {
+                return true;
+            }
+            if (this.pathType == 'Prefix' && request.url.pathname.startsWith(this.path))
+            {
+                if (!otherBackend || (otherBackend.pathType == 'Prefix' && otherBackend.path.length < this.path.length))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     async handleRequest(request: Request)
     {
         if (request.output.isWebSocket)
@@ -60,6 +88,7 @@ export class HTTPBackend extends Backend
         else
         {
             await request.respond(async (res) => {
+                console.log(`Proxying to ${`http://${this.ipAddress}:${this.port}`}`);
                 proxy.web(request.req, res, { target: `http://${this.ipAddress}:${this.port}` }, (err) => {
                     console.log(err);
                     if (!res.headersSent)

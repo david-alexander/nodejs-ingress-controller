@@ -19,7 +19,7 @@ export class IngressController
     cluster: KubernetesCluster;
     certificates: TLSCertificate[] = [];
     backends: HTTPBackend[] = [];
-    frontend: HTTPFrontend;;
+    frontend: HTTPFrontend;
 
     public constructor(logExporter: LogExporter, kc: k8s.KubeConfig, private sessionStore: SessionStore, private plugins: Plugin[])
     {
@@ -63,9 +63,16 @@ export class IngressController
 
         while (true)
         {
-            let result = await this.cluster.processIngresses();
-            this.certificates = result.certificates;
-            this.backends = result.backends;
+            try
+            {
+                let result = await this.cluster.processIngresses();
+                this.certificates = result.certificates;
+                this.backends = result.backends;
+            }
+            catch (e)
+            {
+                console.error(e);
+            }
             
             await new Promise((resolve, reject) => setTimeout(resolve, 1000));
         }
@@ -78,26 +85,18 @@ export class IngressController
             return new DummyBackend();
         }
 
+        let bestResult: HTTPBackend | null = null;
+
         for (let backend of this.backends)
         {
-            if (backend.host == request.hostname)
+            if (backend.isBetterMatchForRequestThan(bestResult, request))
             {
-                if (backend.pathType == 'Exact' && request.url.pathname == backend.path)
-                {
-                    return backend;
-                }
-                if (backend.pathType == 'ImplementationSpecific' && request.url.pathname == backend.path)
-                {
-                    return backend;
-                }
-                if (backend.pathType == 'Prefix' && request.url.pathname.startsWith(backend.path))
-                {
-                    return backend;
-                }
+                console.log("Selecting backend:" + backend.path)
+                bestResult = backend;
             }
         }
 
-        return null;
+        return bestResult;
     }
 
     private async findCertificate(request: SNIRequest)
