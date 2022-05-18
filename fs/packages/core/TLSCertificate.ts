@@ -1,6 +1,11 @@
 import * as k8s from '@kubernetes/client-node';
 import * as tls from 'tls';
 
+/**
+ * A TLS certificate loaded from a Kubernetes `Secret`.
+ * These `Secret`s would typically be created by a tool like `cert-manager`,
+ * but can also be created manually.
+ */
 export class TLSCertificate
 {
     secureContext: tls.SecureContext | null = null;
@@ -11,6 +16,7 @@ export class TLSCertificate
     {
         this.secretName = secret.metadata?.name!;
         
+        // TODO: are all the hostnames always in the alt names, or might the primary hostname sometimes not be there?
         let altnames = (secret.metadata?.annotations || {})['cert-manager.io/alt-names'];
         if (altnames)
         {
@@ -29,6 +35,11 @@ export class TLSCertificate
         }
     }
 
+    /**
+     * Is this certificate valid, unexpired, and suitable for the given hostname?
+     * @param host 
+     * @returns 
+     */
     isValidForHost(host: string)
     {
         return this.secureContext && (!this.hostnames || this.hostnames.find(h => h == host));

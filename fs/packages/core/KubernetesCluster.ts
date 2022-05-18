@@ -8,6 +8,10 @@ const OUR_NAMESPACE = process.env.OUR_NAMESPACE || '';
 const OUR_SERVICE = process.env.OUR_SERVICE || '';
 const OUR_FIELD_MANAGER = process.env.OUR_FIELD_MANAGER || '';
 
+/**
+ * Represents the Kubernetes cluster that we are running inside,
+ * and manages communication with the cluster's API server.
+ */
 export class KubernetesCluster
 {
     private k8sApi: k8s.CoreV1Api;
@@ -19,30 +23,41 @@ export class KubernetesCluster
         this.networkingApi = this.kc.makeApiClient(k8s.NetworkingV1Api);
     }
 
+
     private async getOurServiceIngress()
     {
         let ourService = (await k8sApiCall(() => this.k8sApi.readNamespacedService(OUR_SERVICE, OUR_NAMESPACE))).body;
         return ourService?.status?.loadBalancer?.ingress || null;
     }
 
+    /**
+     * Find all the ingresses that we are responsible for in the cluster,
+     * update their statuses so that they know we're responsible for them, and what IP address they can be reached on,
+     * and load the TLS certificates (where applicable) for each ingress.
+     * @returns The data for the ingresses and TLS certificates.
+     */
     async processIngresses()
     {
         let certificates: TLSCertificate[] = [];
         let backends: HTTPBackend[] = [];
 
+        // Get the public IP address of the ingress controller, so that we can tell our `Ingress`es how they can be reached.
         let ourServiceIngress = await this.getOurServiceIngress();
 
+        // Find all ingresses in the cluster.
         let ingresses = (await k8sApiCall(() => this.networkingApi.listIngressForAllNamespaces())).body.items;
 
         for (let ingress of ingresses)
         {
             try
             {
+                // Ignore any ingresses that don't have our `kubernetes.io/ingress.class` annotation. (These belong to other ingress controllers.)
                 if (ingress.metadata?.name && (ingress.metadata?.annotations || {})['kubernetes.io/ingress.class'] == 'nodejs')
                 {
                     let ingressName = ingress.metadata.name;
                     let ingressNamespace = ingress.metadata?.namespace || 'default';
 
+                    // Each rule may have a different hostname, so we handle them each separately.
                     for (let rule of ingress.spec?.rules || [])
                     {
                         let host = rule.host;
@@ -50,6 +65,8 @@ export class KubernetesCluster
                         if (host)
                         {
                             let isSecure = false;
+
+                            // Look through any TLS certs specified for this host.
                             let validTLS = (ingress.spec?.tls || []).filter(t => t.hosts?.find(h => h == host));
 
                             for (let ingressTLS of validTLS)
@@ -60,13 +77,19 @@ export class KubernetesCluster
 
                                     try
                                     {
+                                        // Try to load the `Secret` for this TLS cert.
                                         let secret = await k8sApiCall(() => this.k8sApi.readNamespacedSecret(secretName, ingressNamespace));
                                         let certificate = new TLSCertificate(secret.body);
                                         
                                         if (certificate.isValidForHost(host))
                                         {
-                                            isSecure = true;
+                                            // We found a valid TLS cert, which is not expired, and is suitable for this host, so use it.
                                             certificates.push(certificate);
+                                            
+                                            // Mark this ingress as secure.
+                                            // This means that *any* problem in getting to this point will lead to the ingress falling back to insecure HTTP.
+                                            // TODO: Is this what we want?
+                                            isSecure = true;
                                         }
                                     }
                                     catch (e)
@@ -76,12 +99,16 @@ export class KubernetesCluster
                                 }
                             }
 
+                            // Each path may have a different backend, so we handle them each separately.
                             for (let path of rule.http?.paths || [])
                             {
                                 let service = path.backend.service;
                                 
                                 if (service?.name)
                                 {
+                                    // Get the IP address and port of the service.
+                                    // TODO: Should we be doing this here, or only in response to requests?
+                                    // TODO: Are we handling custom ports (in the `Ingress` and/or in the `Service`) correctly here?
                                     let serviceName = service.name;
                                     let serviceInfo = (await k8sApiCall(() => this.k8sApi.readNamespacedService(serviceName, ingressNamespace))).body;
                                     
@@ -103,6 +130,7 @@ export class KubernetesCluster
                         }
                     }
 
+                    // Write our public IP address into the `Ingress`' status.
                     if (ourServiceIngress)
                     {
                         await k8sApiCall(() => this.networkingApi.patchNamespacedIngressStatus(ingressName, ingressNamespace, {
@@ -125,9 +153,16 @@ export class KubernetesCluster
             }
         }
 
+        // Return the certificate and backend info.
         return { certificates, backends };
     }
 
+    /**
+     * Convert a Kubernetes `V1ServiceBackendPort` to a number.
+     * TODO: Make this work for named ports.
+     * @param port A `V1ServiceBackendPort`.
+     * @returns The port number associated with this `V1ServiceBackendPort`.
+     */
     private portToNumber(port: k8s.V1ServiceBackendPort)
     {
         return port.number!;

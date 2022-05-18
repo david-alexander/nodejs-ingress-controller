@@ -9,6 +9,9 @@ export enum LogLevel {
     TRACE = 'trace'
 };
 
+/**
+ * Receives log messages and passes them to a `LogExporter`.
+ */
 export class Logger
 {
     public constructor(private exporter: LogExporter)
