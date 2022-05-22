@@ -18,14 +18,15 @@ export class BasicAuthPlugin extends Plugin
         }
 
         const request = pr.request;
+        const matcher = pr.matcher;
         const backend = pr.backend;
 
-        const isEnabled = (backend.ingress.metadata?.annotations || {})['basicauth.api.k8s.dma.net.nz/requireAuth'] == "true";
+        const isEnabled = (matcher?.ingress.metadata?.annotations || {})['basicauth.api.k8s.dma.net.nz/requireAuth'] == "true";
 
         if (isEnabled)
         {
-            const expectedAuthHeader = (backend.ingress.metadata?.annotations || {})['basicauth.api.k8s.dma.net.nz/expectedAuthHeader'] || "";
-            const realm = (backend.ingress.metadata?.annotations || {})['basicauth.api.k8s.dma.net.nz/realm'] || "";
+            const expectedAuthHeader = (matcher?.ingress.metadata?.annotations || {})['basicauth.api.k8s.dma.net.nz/expectedAuthHeader'] || "";
+            const realm = (matcher?.ingress.metadata?.annotations || {})['basicauth.api.k8s.dma.net.nz/realm'] || "";
 
             if (request.req.headers['authorization'] != expectedAuthHeader)
             {

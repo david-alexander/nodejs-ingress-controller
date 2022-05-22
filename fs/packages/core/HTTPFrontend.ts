@@ -3,11 +3,13 @@ import * as https from 'https';
 import * as tls from 'tls';
 import * as stream from 'stream';
 
-import { Backend } from './Backend';
+import { Backend, NotFoundBackend } from './Backend';
 import { TLSCertificate } from './TLSCertificate';
 import { Request, SNIRequest } from './Request';
 import { SessionStore } from './SessionStore';
 import { Logger, LogLevel } from './Logger';
+import { RequestMatcher } from './RequestMatcher';
+import { RequestMatchResult } from './KubernetesCluster';
 
 const LOG_COMPONENT = 'HTTPFrontend';
 
@@ -27,7 +29,7 @@ export class HTTPFrontend
      * @param getCertificate Callback that returns a `TLSCertificate` to use for a given `SNIRequest`.
      */
     public start(
-        getBackend: (request: Request) => Promise<Backend | null>,
+        getBackend: (request: Request) => Promise<RequestMatchResult>,
         getCertificate: (request: SNIRequest) => Promise<TLSCertificate | null>)
     {
         // Generic request handler.
@@ -47,7 +49,7 @@ export class HTTPFrontend
 
                     // Redirect to HTTPS if necessary.
                     // We use a 308 Permanent Redirect so that the browser will (hopefully - need to check this!) default to HTTPS for this hostname in the future.
-                    if (backend?.isSecure && !request.isSecure)
+                    if (backend?.certificate && !request.isSecure)
                     {
                         request.respond(async (res) => {
                             res.writeHead(308, {
@@ -58,18 +60,17 @@ export class HTTPFrontend
                         return;
                     }
 
-                    // If we found a backend, pass the request on to it.
-                    if (backend)
-                    {
-                        await backend.handleRequest(request);
-                    }
+                    backend.backend ||= new NotFoundBackend();
 
-                    // If the backend wasn't found, or couldn't handle the request, return a 404 Not Found response.
+                    // Pass the request on to the backend.
+                    await backend.backend.handleRequest(request);
+
+                    // If the backend couldn't handle the request, return a 502 Bad Gateway response.
                     if (!request.hasBeenRespondedTo)
                     {
                         request.respond(async (res) => {
-                            res.writeHead(404);
-                            res.end('Not found');
+                            res.writeHead(502);
+                            res.end('Bad gateway');
                         });
                     }
                 }

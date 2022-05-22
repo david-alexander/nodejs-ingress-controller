@@ -1,8 +1,8 @@
 import * as k8s from '@kubernetes/client-node';
 import { HTTPFrontend } from "./HTTPFrontend";
-import { KubernetesCluster } from "./KubernetesCluster";
+import { ClusterIngressData, KubernetesCluster, RequestMatchResult } from "./KubernetesCluster";
 import { TLSCertificate } from "./TLSCertificate";
-import { Backend, DummyBackend, HTTPBackend } from "./Backend";
+import { Backend, DummyBackend, HTTPBackend, NotFoundBackend, UnavailableBackend } from "./Backend";
 import { Request, SNIRequest } from "./Request";
 import { Plugin } from "./Plugin";
 import { SessionStore } from "./SessionStore";
@@ -10,6 +10,7 @@ import { K8sCRDSessionStore } from "../k8scrdsession/K8sCRDSessionStore";
 import { PluginRequest } from "./PluginRequest";
 import { LogExporter } from './LogExporter';
 import { Logger } from './Logger';
+import { RequestMatcher } from './RequestMatcher';
 
 const REDIRECT_TO_LOCALHOST = process.env.OIDC_REDIRECT_TO_LOCALHOST == '1';
 
@@ -20,8 +21,7 @@ export class IngressController
 {
     logger: Logger;
     cluster: KubernetesCluster;
-    certificates: TLSCertificate[] = [];
-    backends: HTTPBackend[] = [];
+    ingressData: ClusterIngressData[] = [];
     frontend: HTTPFrontend;
 
     public constructor(logExporter: LogExporter, kc: k8s.KubeConfig, private sessionStore: SessionStore, private plugins: Plugin[])
@@ -53,7 +53,7 @@ export class IngressController
                 if (backend)
                 {
                     // Give plugins an opportunity to handle the request before it gets passed to the backend.
-                    let pr = new PluginRequest(request, backend);
+                    let pr = new PluginRequest(request, backend.matcher, backend.backend);
                     
                     for (let plugin of this.plugins)
                     {
@@ -61,12 +61,11 @@ export class IngressController
                         
                         if (request.hasBeenRespondedTo)
                         {
-                            return null;
+                            break;
                         }
                     }
                 }
                 
-                // If no plugin has handled the request, let it be passed to the backend.
                 return backend;
             },
 
@@ -79,12 +78,21 @@ export class IngressController
         {
             try
             {
-                let result = await this.cluster.processIngresses();
-                this.certificates = result.certificates;
-                this.backends = result.backends;
+                let newIngressData = await this.cluster.processIngresses();
+
+                for (let ingressData of newIngressData)
+                {
+                    let existingData = this.ingressData.find(i => i.matcher.isIdenticalTo(ingressData.matcher)) || null;
+
+                    // Fall back to existing data if the latest data is unavailable.
+                    ingressData.certificate ||= existingData?.certificate || null;
+                    ingressData.backend ||= existingData?.backend || null;
+                }
+
+                this.ingressData = newIngressData;
             }
             catch (e)
-            {
+            {  
                 console.error(e);
             }
             
@@ -97,28 +105,49 @@ export class IngressController
      * @param request The request to find a backend for.
      * @returns The backend that should handle the request.
      */
-    private async findBackend(request: Request): Promise<Backend | null>
+    private async findBackend(request: Request): Promise<RequestMatchResult>
     {
         // Use a dummy backend for the `localhost` hostname, if the `OpenIDConnectPlugin` needs it.
         // TODO: This should be handled inside the plugin.
         if (REDIRECT_TO_LOCALHOST && request.hostname == 'localhost')
         {
-            return new DummyBackend();
+            return { matcher: null, certificate: null, backend: new DummyBackend() };
         }
 
         // Find the best backend for the request.
-        let bestResult: HTTPBackend | null = null;
+        let bestResult: ClusterIngressData | null = null;
 
-        for (let backend of this.backends)
+        for (let ingressData of this.ingressData)
         {
-            if (backend.isBetterMatchForRequestThan(bestResult, request))
+            if (ingressData.matcher.isBetterMatchForRequestThan(bestResult?.matcher || null, request))
             {
-                console.log("Selecting backend:" + backend.path)
-                bestResult = backend;
+                console.log("Selecting backend:" + ingressData.matcher.path)
+                bestResult = ingressData;
             }
         }
 
-        return bestResult;
+        if (!bestResult)
+        {
+            return {
+                matcher: null,
+
+                backend: new NotFoundBackend(),
+    
+                // TODO: We may have a valid certificate for the hostname, even if there's no ingress that matches the path.
+                //       If so, we should return it here.
+                certificate: null
+            };
+        }
+
+        return {
+            matcher: bestResult.matcher,
+
+            backend: bestResult.backend || new UnavailableBackend(),
+
+            // TODO: We may have a valid certificate for the hostname, even if there's no ingress that matches the path.
+            //       If so, we should return it here.
+            certificate: bestResult.certificate
+        };
     }
 
     /**
@@ -128,11 +157,11 @@ export class IngressController
      */
     private async findCertificate(request: SNIRequest)
     {
-        for (let certificate of this.certificates)
+        for (let ingressData of this.ingressData)
         {
-            if (certificate.isValidForHost(request.hostname))
+            if (ingressData.certificate && ingressData.certificate.isValidForHost(request.hostname))
             {
-                return certificate;
+                return ingressData.certificate;
             }
         }
 

@@ -107,15 +107,16 @@ export class OpenIDConnectPlugin extends Plugin
             return;
         }
 
+        const matcher = pr.matcher;
         const backend = pr.backend;
 
-        const isEnabled = (backend.ingress.metadata?.annotations || {})['oidc.api.k8s.dma.net.nz/requireAuth'] == "true";
+        const isEnabled = !matcher || (matcher.ingress.metadata?.annotations || {})['oidc.api.k8s.dma.net.nz/requireAuth'] == "true";
 
         // Only handle requests for ingresses that we have been asked to protect. Allow all others to continue without authentication.
         if (isEnabled)
         {
-            const extraScopes = (backend.ingress.metadata?.annotations || {})['oidc.api.k8s.dma.net.nz/extraScopes'] || "";
-            const allowAccessTokenInHeader = (backend.ingress.metadata?.annotations || {})['oidc.api.k8s.dma.net.nz/allowAccessTokenInHeader'] == "true";
+            const extraScopes = (matcher?.ingress.metadata?.annotations || {})['oidc.api.k8s.dma.net.nz/extraScopes'] || "";
+            const allowAccessTokenInHeader = (matcher?.ingress.metadata?.annotations || {})['oidc.api.k8s.dma.net.nz/allowAccessTokenInHeader'] == "true";
 
             if (allowAccessTokenInHeader)
             {
